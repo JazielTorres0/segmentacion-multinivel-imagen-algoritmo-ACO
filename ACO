@@ -1,0 +1,87 @@
+import numpy as np
+import random
+
+# Distancias entre ciudades (matriz)
+distancias = np.array([
+    [0, 2, 2, 5],
+    [2, 0, 3, 4],
+    [2, 3, 0, 1],
+    [5, 4, 1, 0]
+])
+
+num_ciudades = len(distancias)
+num_hormigas = 10
+iteraciones = 50
+
+alpha = 1  # importancia de feromonas
+beta = 2   # importancia de distancia
+evaporacion = 0.5
+
+# Inicializar feromonas
+feromonas = np.ones((num_ciudades, num_ciudades))
+
+def elegir_siguiente(ciudad_actual, visitadas):
+    probabilidades = []
+    
+    for ciudad in range(num_ciudades):
+        if ciudad not in visitadas:
+            tau = feromonas[ciudad_actual][ciudad] ** alpha
+            eta = (1 / distancias[ciudad_actual][ciudad]) ** beta
+            probabilidades.append((ciudad, tau * eta))
+    
+    total = sum(p for _, p in probabilidades)
+    probabilidades = [(c, p/total) for c, p in probabilidades]
+    
+    r = random.random()
+    acumulado = 0
+    
+    for ciudad, prob in probabilidades:
+        acumulado += prob
+        if r <= acumulado:
+            return ciudad
+
+def construir_ruta():
+    ruta = [random.randint(0, num_ciudades - 1)]
+    
+    while len(ruta) < num_ciudades:
+        siguiente = elegir_siguiente(ruta[-1], ruta)
+        ruta.append(siguiente)
+    
+    return ruta
+
+def calcular_distancia(ruta):
+    total = 0
+    for i in range(len(ruta) - 1):
+        total += distancias[ruta[i]][ruta[i+1]]
+    total += distancias[ruta[-1]][ruta[0]]
+    return total
+
+def actualizar_feromonas(rutas):
+    global feromonas
+    
+    # Evaporación
+    feromonas *= (1 - evaporacion)
+    
+    # Depositar feromonas
+    for ruta in rutas:
+        distancia = calcular_distancia(ruta)
+        for i in range(len(ruta) - 1):
+            feromonas[ruta[i]][ruta[i+1]] += 1 / distancia
+
+# Algoritmo principal
+mejor_ruta = None
+mejor_distancia = float('inf')
+
+for _ in range(iteraciones):
+    rutas = [construir_ruta() for _ in range(num_hormigas)]
+    
+    for ruta in rutas:
+        distancia = calcular_distancia(ruta)
+        if distancia < mejor_distancia:
+            mejor_distancia = distancia
+            mejor_ruta = ruta
+    
+    actualizar_feromonas(rutas)
+
+print("Mejor ruta:", mejor_ruta)
+print("Distancia:", mejor_distancia)
